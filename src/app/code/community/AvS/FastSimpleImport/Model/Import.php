@@ -126,19 +126,81 @@ class AvS_FastSimpleImport_Model_Import extends Mage_ImportExport_Model_Import
         return $this;
     }
 
-    /**
-     * Import products
-     *
-     * @param array       $data
-     * @param string|null $behavior
-     *
-     * @return AvS_FastSimpleImport_Model_Import
-     */
-    public function dryrunProductImport($data, $behavior = NULL)
-    {
-        $transport = new Varien_Object(array('import_data' => $data));
-        Mage::dispatchEvent('fastsimpleimport_dryrun_products_before', array('import_data' => $transport));
-        $data = $transport->getImportData();
+	/**
+	 * Import orders
+	 *
+	 * @param array       $data
+	 * @param string|null $behavior
+	 *
+	 * @return AvS_FastSimpleImport_Model_Import
+	 */
+	public function processOrderImport($data, $behavior = NULL)
+	{
+		$transport = new Varien_Object(array('import_data' => $data));
+		Mage::dispatchEvent('fastsimpleimport_import_products_before', array('import_data' => $transport));
+		$data = $transport->getImportData();
+
+		if (!is_null($behavior)) {
+			$this->setBehavior($behavior);
+		}
+
+		$this->setEntity(Mage_Catalog_Model_Product::ENTITY);
+		$partialIndexing = $this->getPartialIndexing();
+
+		/** @var $entityAdapter AvS_FastSimpleImport_Model_Import_Entity_Product */
+		$validTypes = Mage_ImportExport_Model_Config::getModels(Mage_ImportExport_Model_Import::CONFIG_KEY_ENTITIES);
+		$entityAdapter = Mage::getModel($validTypes[$this->getEntity()]['model']);
+		$entityAdapter->setBehavior($this->getBehavior());
+		$entityAdapter->setIsDryRun(false);
+		$entityAdapter->setErrorLimit($this->getErrorLimit());
+		$entityAdapter->setDropdownAttributes($this->getDropdownAttributes());
+		$entityAdapter->setMultiselectAttributes($this->getMultiselectAttributes());
+		$entityAdapter->setImageAttributes($this->getImageAttributes());
+		$entityAdapter->setAllowRenameFiles($this->getAllowRenameFiles());
+		$entityAdapter->setDisablePreprocessImageData($this->getDisablePreprocessImageData());
+		$entityAdapter->setUnsetEmptyFields($this->getUnsetEmptyFields());
+		$entityAdapter->setSymbolEmptyFields($this->getSymbolEmptyFields());
+		$entityAdapter->setSymbolIgnoreFields($this->getSymbolIgnoreFields());
+		$entityAdapter->setIgnoreDuplicates($this->getIgnoreDuplicates());
+		$this->setEntityAdapter($entityAdapter);
+
+		$validationResult = true; //$this->validateSource($data);
+		if ($this->getProcessedRowsCount() > 0) {
+			if (!$validationResult) {
+				if ($entityAdapter->getErrorsCount() >= $entityAdapter->getErrorsLimit()) {
+					Mage::throwException(
+						sprintf("Error Limit of %s Errors reached, stopping import.", $entityAdapter->getErrorsLimit())
+						. "\n" . $this->getErrorMessage()
+					);
+				}
+
+				if (!$this->getContinueAfterErrors()) {
+
+					Mage::throwException($this->getErrorMessage());
+				}
+			}
+
+			if ($this->getProcessedRowsCount() > $this->getInvalidRowsCount()) {
+				$this->importSource();
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Import products
+	 *
+	 * @param array       $data
+	 * @param string|null $behavior
+	 *
+	 * @return AvS_FastSimpleImport_Model_Import
+	 */
+	public function dryrunProductImport($data, $behavior = NULL)
+	{
+		$transport = new Varien_Object(array('import_data' => $data));
+		Mage::dispatchEvent('fastsimpleimport_dryrun_products_before', array('import_data' => $transport));
+		$data = $transport->getImportData();
 
         if (!is_null($behavior)) {
             $this->setBehavior($behavior);

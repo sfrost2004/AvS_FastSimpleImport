@@ -41,6 +41,10 @@
                     <model_token>fastsimpleimport/import_entity_product</model_token>
                     <label>Product</label>
                 </catalog_product>
+                <order translate="label">
+                    <model_token>fastsimpleimport/import_entity_order</model_token>
+                    <label>Order</label>
+                </order>
                 <catalog_category translate="label">
                     <model_token>fastsimpleimport/import_entity_category</model_token>
                     <label>Category</label>
